@@ -1,0 +1,17 @@
+{
+    "Plugins": [
+        {
+            "Info": {
+                "Types": {
+                    "@AR_PATHMAPRESOLVER_USD_CXX_CLASS_NAME@": {
+                        "bases": ["ArDefaultResolver"]
+                    }
+                }
+            },
+            "LibraryPath": "../lib/@AR_PATHMAPRESOLVER_TARGET_LIB@.@AR_ARCH_LIB_SUFFIX@",
+            "Name": "@AR_PATHMAPRESOLVER_USD_PLUGIN_NAME@",
+            "Type": "library"
+        }
+    ]
+}
+
