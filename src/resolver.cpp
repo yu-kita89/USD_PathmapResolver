@@ -228,10 +228,20 @@ ArResolvedPath ArPathmapResolver::_Resolve(
                     // バリューはVtValue型なのでstd::stringに変換して取得;
                     std::string k = pathmap.first;
                     std::string v = pathmap.second.Get<std::string>();
+                    // キーが空の場合はスキップ
+                    if (k.empty()) {
+                        continue;
+                    }
                     // キーとパスの先頭文字が同じ場合;
-                    if (!k.empty() && TfStringStartsWith(newAssetPath,k)) {
+                    else if (TfStringStartsWith(newAssetPath,k)) {
                         //　パスの先頭文字をバリューで置き換える;
                         newAssetPath.replace(0, k.length(), v);
+                        TF_DEBUG(AR_PATHMAPRESOLVER).Msg("[Resolve]   Mapped path from \"%s\" to \"%s\".\n", k.c_str(), v.c_str());
+                    }
+                    // 正規化したキーとパスの先頭文字が同じ場合;
+                    else if (TfStringStartsWith(newAssetPath,TfNormPath(k))) {
+                        //　パスの先頭文字を正規化したバリューで置き換える;
+                        newAssetPath.replace(0, TfNormPath(k).length(), TfNormPath(v));
                         TF_DEBUG(AR_PATHMAPRESOLVER).Msg("[Resolve]   Mapped path from \"%s\" to \"%s\".\n", k.c_str(), v.c_str());
                     }
                 }
