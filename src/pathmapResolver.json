@@ -1,0 +1,19 @@
+{
+    "env": [
+        {"HOUDINI_USD_DSO_PATH" : [
+            "$HOUDINI_PACKAGE_PATH/../resources"
+        ]},
+        {"PATH" : [
+            {
+                "houdini_os == 'windows'" : "$HOUDINI_PACKAGE_PATH/../lib",
+                "method": "append"
+            }
+        ]},
+        {"LD_LIBRARY_PATH" : [
+            {
+                "houdini_os == 'linux'"   : "$HOUDINI_PACKAGE_PATH/../lib",
+                "method": "append"
+            }
+        ]}
+    ]
+}
