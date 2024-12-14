@@ -171,8 +171,15 @@ ArResolvedPath ArPathmapResolver::_Resolve(
                 for (const auto& pathmap : ctx->GetPathmapDict()) {
                     std::string k = pathmap.first;
                     std::string v = pathmap.second.Get<std::string>();
-                    if (!k.empty() && TfStringStartsWith(newAssetPath,k)) {
+                    if (k.empty()) {
+                        continue;
+                    }
+                    else if (TfStringStartsWith(newAssetPath,k)) {
                         newAssetPath.replace(0, k.length(), v);
+                        TF_DEBUG(AR_PATHMAPRESOLVER).Msg("[Resolve]   Mapped path from \"%s\" to \"%s\".\n", k.c_str(), v.c_str());
+                    }
+                    else if (TfStringStartsWith(newAssetPath,TfNormPath(k))) {
+                        newAssetPath.replace(0, TfNormPath(k).length(), TfNormPath(v));
                         TF_DEBUG(AR_PATHMAPRESOLVER).Msg("[Resolve]   Mapped path from \"%s\" to \"%s\".\n", k.c_str(), v.c_str());
                     }
                 }
