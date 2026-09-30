@@ -162,7 +162,7 @@ ArResolvedPath ArPathmapResolver::_Resolve(
     const ArPathmapResolverContext* contexts[2] =
         {_GetCurrentContextPtr(), &_DefaultPath->context};
 
-    std::string newAssetPath = path;
+    std::string newAssetPath = TfStringReplace(path, "\\", "/");
     TF_DEBUG(AR_PATHMAPRESOLVER).Msg("[Resolve] Trying to resolve the path. : \"%s\"\n", path.c_str());
 
     if (!_IsFileRelative(newAssetPath) && !TfPathExists(newAssetPath)) {
