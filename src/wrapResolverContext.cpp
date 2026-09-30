@@ -4,15 +4,15 @@
 
 #include "resolverContext.h"
 
-#define BOOST_INCLUDE(path) <AR_BOOST_NAMESPACE/path>
+#define BOOST_INCLUDE(path) <AR_BOOST_INCLUDE_PREFIX/path>
 #include BOOST_INCLUDE(python/class.hpp)
 #include BOOST_INCLUDE(python/operators.hpp)
 #include BOOST_INCLUDE(python/return_value_policy.hpp)
 #include BOOST_INCLUDE(python/copy_const_reference.hpp)
 
-using namespace AR_BOOST_NAMESPACE::python;
-
 PXR_NAMESPACE_USING_DIRECTIVE
+
+using namespace AR_BOOST_NAMESPACE::python;
 
 static std::string
 _Repr(const ArPathmapResolverContext& ctx)

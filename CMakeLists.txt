@@ -36,6 +36,15 @@ endif()
 # Houdini
 set(AR_HOUDINI_ROOT $ENV{HFS} CACHE PATH "Houdini install directory")
 set(AR_HOUDINI_INCLUDE_DIR ${AR_HOUDINI_ROOT}/toolkit/include)
+if(WIN32)
+    set(AR_HYTHON_EXECUTABLE "${AR_HOUDINI_ROOT}/bin/hython.exe")
+else()
+    set(AR_HYTHON_EXECUTABLE "${AR_HOUDINI_ROOT}/bin/hython")
+endif()
+
+if(NOT EXISTS "${AR_HYTHON_EXECUTABLE}")
+    message(FATAL_ERROR "Houdini Python executable not found: ${AR_HYTHON_EXECUTABLE}")
+endif()
 
 # Usd
 if (WIN32)
@@ -48,44 +57,108 @@ endif()
 set(AR_PXR_INCLUDE_DIR ${AR_HOUDINI_INCLUDE_DIR})
 
 # Python
-if (WIN32)
-    if(EXISTS "${AR_HOUDINI_ROOT}/python311")
-        set(AR_PYTHON_LIB python3.11)
-        set(AR_PYTHON_LIB_NUMBER python311)
-    elseif(EXISTS "${AR_HOUDINI_ROOT}/python310")
-        set(AR_PYTHON_LIB python3.10)
-        set(AR_PYTHON_LIB_NUMBER python310)
-    else()
-        set(AR_PYTHON_LIB python3.9)
-        set(AR_PYTHON_LIB_NUMBER python39)
-    endif()
-else()
-    if(EXISTS "${AR_HOUDINI_ROOT}/python/bin/python3.11")
-        set(AR_PYTHON_LIB python3.11)
-        set(AR_PYTHON_LIB_NUMBER python311)
-    elseif(EXISTS "${AR_HOUDINI_ROOT}/python/bin/python3.10")
-        set(AR_PYTHON_LIB python3.10)
-        set(AR_PYTHON_LIB_NUMBER python310)
-    else()
-        set(AR_PYTHON_LIB python3.9)
-        set(AR_PYTHON_LIB_NUMBER python39)
-    endif()
+execute_process(
+    COMMAND "${AR_HYTHON_EXECUTABLE}" -V
+    RESULT_VARIABLE AR_PYTHON_DETECT_RESULT
+    OUTPUT_VARIABLE AR_HYTHON_RAW_OUTPUT
+    ERROR_VARIABLE  AR_HYTHON_RAW_OUTPUT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+if(NOT AR_PYTHON_DETECT_RESULT EQUAL 0 OR NOT AR_HYTHON_RAW_OUTPUT MATCHES "Python ([0-9]+\\.[0-9]+)")
+    message(FATAL_ERROR "Failed to detect Houdini Python version")
 endif()
-if (WIN32)
-    set(AR_PYTHON_LIB_DIR ${AR_HOUDINI_ROOT}/${AR_PYTHON_LIB_NUMBER}/libs)
+set(AR_PYTHON_VERSION "${CMAKE_MATCH_1}")
+
+# Example:
+#   AR_PYTHON_VERSION         = 3.11
+#   AR_PYTHON_VERSION_COMPACT = 311
+#   AR_PYTHON_LIB             = python3.11
+#   AR_PYTHON_LIB_NUMBER      = python311
+string(
+    REPLACE "." ""
+    AR_PYTHON_VERSION_COMPACT
+    "${AR_PYTHON_VERSION}"
+)
+set(AR_PYTHON_LIB         "python${AR_PYTHON_VERSION}")
+set(AR_PYTHON_LIB_NUMBER  "python${AR_PYTHON_VERSION_COMPACT}")
+set(AR_PYTHON_INCLUDE_DIR "${AR_HOUDINI_INCLUDE_DIR}/${AR_PYTHON_LIB}")
+
+if(WIN32)
+    set(AR_PYTHON_LIB_DIR "${AR_HOUDINI_ROOT}/${AR_PYTHON_LIB_NUMBER}/libs")
+    find_library(
+        AR_PYTHON_LIBRARY
+        NAMES "${AR_PYTHON_LIB_NUMBER}"
+        PATHS "${AR_PYTHON_LIB_DIR}"
+        NO_DEFAULT_PATH
+        REQUIRED
+    )
 else()
-    set(AR_PYTHON_LIB_DIR ${AR_HOUDINI_ROOT}/python/lib)
+    set(AR_PYTHON_LIB_DIR "${AR_HOUDINI_ROOT}/python/lib")
 endif()
-set(AR_PYTHON_INCLUDE_DIR ${AR_HOUDINI_INCLUDE_DIR}/${AR_PYTHON_LIB})
 
 # Boost
-set(AR_BOOST_NAMESPACE hboost)
-if (WIN32)
-    set(AR_BOOST_PYTHON_LIB ${AR_BOOST_NAMESPACE}_${AR_PYTHON_LIB_NUMBER}-mt-x64)
+# Detect whether this OpenUSD uses its internal Boost.Python.
+if(EXISTS "${AR_PXR_INCLUDE_DIR}/pxr/external/boost")
+    set(AR_USE_INTERNAL_BOOST_PYTHON ON)
+    set(AR_BOOST_NAMESPACE      pxr_boost)
+    set(AR_BOOST_INCLUDE_PREFIX pxr/external/boost)
+    # noncopyable moved under pxr_boost::python
+    set(AR_BOOST_NONCOPYABLE "${AR_BOOST_NAMESPACE}::python::noncopyable")
+
+    find_library(
+        AR_PXR_PYTHON_LIBRARY
+        NAMES "${AR_PXR_LIB_PREFIX}python"
+        PATHS "${AR_PXR_LIB_DIR}"
+        NO_DEFAULT_PATH
+        REQUIRED
+    )
+    find_library(
+        AR_PXR_BOOST_LIBRARY
+        NAMES "${AR_PXR_LIB_PREFIX}boost"
+        PATHS "${AR_PXR_LIB_DIR}"
+        NO_DEFAULT_PATH
+        REQUIRED
+    )
+    set(
+        AR_USD_PYTHON_LINK_LIBS
+        "${AR_PXR_PYTHON_LIBRARY}"
+        "${AR_PXR_BOOST_LIBRARY}"
+    )
 else()
-    set(AR_BOOST_PYTHON_LIB ${AR_BOOST_NAMESPACE}_${AR_PYTHON_LIB_NUMBER})
+    set(AR_USE_INTERNAL_BOOST_PYTHON OFF)
+    set(AR_BOOST_NAMESPACE      hboost)
+    set(AR_BOOST_INCLUDE_PREFIX hboost)
+    # Old Boost expects hboost::noncopyable.
+    set(AR_BOOST_NONCOPYABLE "${AR_BOOST_NAMESPACE}::noncopyable")
+
+    if(WIN32)
+        set(AR_BOOST_PYTHON_LIB_NAME "${AR_BOOST_NAMESPACE}_${AR_PYTHON_LIB_NUMBER}-mt-x64")
+    else()
+        set(AR_BOOST_PYTHON_LIB_NAME "${AR_BOOST_NAMESPACE}_${AR_PYTHON_LIB_NUMBER}")
+    endif()
+
+    find_library(
+        AR_BOOST_PYTHON_LIBRARY
+        NAMES "${AR_BOOST_PYTHON_LIB_NAME}"
+        PATHS "${AR_PXR_LIB_DIR}"
+              "${AR_HOUDINI_ROOT}/dsolib"
+        NO_DEFAULT_PATH
+        REQUIRED
+    )
+    set(
+        AR_USD_PYTHON_LINK_LIBS
+        "${AR_BOOST_PYTHON_LIBRARY}"
+    )
 endif()
-set(AR_BOOST_INCLUDE_DIR ${AR_HOUDINI_INCLUDE_DIR}/${AR_BOOST_NAMESPACE})
+
+if(WIN32)
+    list(
+        APPEND
+        AR_USD_PYTHON_LINK_LIBS
+        "${AR_PYTHON_LIBRARY}"
+    )
+endif()
 
 ### CPP Settings ###
 set(BUILD_SHARED_LIBS ON)
@@ -116,4 +189,25 @@ else()
 endif()
 
 ### Targets ###
+add_library(
+    ar_houdini_usd_python
+    INTERFACE
+)
+target_include_directories(
+    ar_houdini_usd_python
+    INTERFACE
+        "${AR_PXR_INCLUDE_DIR}"
+        "${AR_PYTHON_INCLUDE_DIR}"
+)
+target_link_libraries(
+    ar_houdini_usd_python
+    INTERFACE ${AR_USD_PYTHON_LINK_LIBS}
+)
+target_compile_definitions(
+    ar_houdini_usd_python
+    INTERFACE
+        AR_BOOST_NAMESPACE=${AR_BOOST_NAMESPACE}
+        AR_BOOST_INCLUDE_PREFIX=${AR_BOOST_INCLUDE_PREFIX}
+        AR_BOOST_NONCOPYABLE=${AR_BOOST_NONCOPYABLE}
+)
 add_subdirectory("src")

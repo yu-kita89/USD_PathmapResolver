@@ -18,7 +18,6 @@ add_library(${AR_PATHMAPRESOLVER_TARGET_LIB}
 target_link_directories(${AR_PATHMAPRESOLVER_TARGET_LIB}
     PUBLIC
         ${AR_PXR_LIB_DIR}
-        ${AR_PYTHON_LIB_DIR}
 )
 target_link_libraries(${AR_PATHMAPRESOLVER_TARGET_LIB}
     PUBLIC
@@ -27,14 +26,13 @@ target_link_libraries(${AR_PATHMAPRESOLVER_TARGET_LIB}
         ${AR_PXR_LIB_PREFIX}tf
         ${AR_PXR_LIB_PREFIX}vt
         ${AR_PXR_LIB_PREFIX}js
-        ${AR_BOOST_PYTHON_LIB}
+    PRIVATE
+        ar_houdini_usd_python
 )
 # Headers
 target_include_directories(${AR_PATHMAPRESOLVER_TARGET_LIB}
     PUBLIC
         ${AR_PXR_INCLUDE_DIR}
-        ${AR_PYTHON_INCLUDE_DIR}
-        ${AR_BOOST_INCLUDE_DIR}
 )
 # Props
 # Remove default "lib" prefix
@@ -65,6 +63,7 @@ add_dependencies(${AR_PATHMAPRESOLVER_TARGET_PYTHON} ${AR_PATHMAPRESOLVER_TARGET
 target_link_libraries(${AR_PATHMAPRESOLVER_TARGET_PYTHON}
     PRIVATE
         ${AR_PATHMAPRESOLVER_TARGET_LIB}
+        ar_houdini_usd_python
 )
 # Props
 # Remove default "lib" prefix
@@ -81,7 +80,6 @@ target_compile_definitions(${AR_PATHMAPRESOLVER_TARGET_PYTHON}
         MFB_PACKAGE_MODULE=${AR_PATHMAPRESOLVER_USD_PYTHON_MODULE_NAME}
         AR_PATHMAPRESOLVER_USD_PLUGIN_NAME=${AR_PATHMAPRESOLVER_USD_PLUGIN_NAME}
         AR_PATHMAPRESOLVER_USD_PYTHON_MODULE_FULLNAME=${AR_PATHMAPRESOLVER_USD_PYTHON_MODULE_FULLNAME}
-        AR_BOOST_NAMESPACE=${AR_BOOST_NAMESPACE}
 )
 # Install
 install (
