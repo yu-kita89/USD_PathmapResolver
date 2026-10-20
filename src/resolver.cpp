@@ -178,7 +178,7 @@ ArResolvedPath ArPathmapResolver::_Resolve(
                         newAssetPath.replace(0, k.length(), v);
                         TF_DEBUG(AR_PATHMAPRESOLVER).Msg("[Resolve]   Mapped path from \"%s\" to \"%s\".\n", k.c_str(), v.c_str());
                     }
-                    else if (TfStringStartsWith(newAssetPath,TfNormPath(k))) {
+                    else if (TfStringStartsWith(newAssetPath,TfNormPath(k) + (k.back() == '/' ? "/" : ""))) {
                         newAssetPath.replace(0, TfNormPath(k).length(), TfNormPath(v));
                         TF_DEBUG(AR_PATHMAPRESOLVER).Msg("[Resolve]   Mapped path from \"%s\" to \"%s\".\n", k.c_str(), v.c_str());
                     }
